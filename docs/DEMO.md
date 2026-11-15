@@ -1,6 +1,6 @@
 # Functional demonstration
 
-1. Follow the README to create the MySQL database, migrate, create an administrator, and start the API and Flutter application.
+1. Start the API and configure an administrator using the separate API repository documentation. Follow this repository README to start Flutter.
 2. Register an employee. Confirm that the dashboard loads and staff management is unavailable. Sign out and sign back in.
 3. Create a customer with name and phone; search for them, change the phone and reopen the record.
 4. Create a device and select that customer. Edit its model.

@@ -1,75 +1,129 @@
-# TechFix
+# TechFix — Gestão de assistência técnica
 
-Flutter Android application and Laravel 12 REST API for a mobile repair shop. TechFix uses MySQL and Sanctum bearer tokens, with all application data accessed through the Laravel API. Remaining UI examples from the original teaching scaffold are preserved in `docs/original-scaffold/` and excluded from analysis.
+**Aluno:** Everton Kafka
 
-## Requirements
+**Base de dados escolhida / integração:** API Laravel (REST), com armazenamento em MySQL.
 
-- Flutter with Dart 3.9 or later, Android SDK and an emulator or physical device.
-- PHP 8.2+, Composer, MySQL 8+ (or compatible MariaDB). Enable PHP extensions `pdo_mysql`, `mbstring`, `openssl`, `fileinfo`, `dom`, `xml`, `zip`. Tests additionally use `pdo_sqlite`.
-- The API and mobile app run as separate processes.
+## Descrição do app
 
-## Backend setup
+O TechFix é um aplicativo Flutter para gerenciar uma assistência técnica de celulares. Permite cadastrar clientes e aparelhos, acompanhar ordens de serviço, controlar o estoque de peças e consultar indicadores da oficina.
 
-For a containerized local API and MySQL environment, follow [Docker testing](docs/DOCKER.md). XAMPP is not required for that option.
+O aplicativo acessa os dados pela API Laravel, mantida em um projeto separado, e utiliza autenticação por tokens do Laravel Sanctum. Funcionários compartilham os registros da oficina; apenas administradores gerenciam os usuários.
 
-```powershell
-cd backend
-composer install
-Copy-Item .env.example .env
-```
+## Funcionalidades
 
-Create an empty MySQL database named `techfix`. Edit `backend/.env` with your MySQL host, username and password. Then:
+- Cadastro, login, restauração de sessão e logout.
+- Painel com indicadores e atalhos.
+- Cadastro, consulta, edição e exclusão de clientes, aparelhos, ordens e peças.
+- Aparelhos com cliente opcional; toda ordem exige um aparelho.
+- Status, responsável, diagnóstico, valor e histórico das ordens.
+- Edição do perfil e gestão de funcionários por administradores.
+- Busca, filtros de ordens, validações e tratamento de falhas de conexão.
 
-```powershell
-php artisan key:generate
-php artisan migrate
-php artisan techfix:admin admin@example.com
-php artisan serve --host=0.0.0.0 --port=8000
-```
+## Telas e rotas
 
-The admin command prompts for a name and password, or promotes an existing account. There are no built-in administrator credentials. Public registration always creates an employee; administrators create and edit staff through the app. An administrator cannot delete or demote their own account. Changing another user's role or password revokes their existing tokens.
+| Tela | Rota | Finalidade |
+| --- | --- | --- |
+| Login | `/login` | Entrar com e-mail e senha. |
+| Cadastro | `/register` | Criar uma conta de funcionário. |
+| Início | `/home` | Consultar indicadores e atalhos. |
+| Clientes | `/clientes` | Gerenciar clientes. |
+| Aparelhos | `/aparelhos` | Gerenciar aparelhos. |
+| Ordens de serviço | `/ordens` | Consultar, buscar e filtrar ordens. |
+| Estoque de peças | `/parts` | Gerenciar peças e quantidades. |
+| Funcionários | `/users` | Gerenciar usuários; exclusivo de administradores. |
+| Perfil | `/perfil` | Editar os dados do usuário conectado. |
+| Novo registro | `/form/:resource` | Cadastrar um registro. |
+| Editar registro | `/form/:resource?id=ID` | Editar um registro existente. |
+| Detalhes da ordem | `/details/ordens?id=ID` | Consultar a ordem e seu histórico. |
 
-Use HTTPS and `APP_DEBUG=false` for deployment. `CORS_ALLOWED_ORIGINS` is a comma-separated list of exact permitted browser origins for future web clients. The mobile client uses bearer tokens, not browser cookie authentication. See [Laravel Sanctum documentation](https://laravel.com/framework/docs/12.x/sanctum).
+Nos formulários, `:resource` corresponde a `clientes`, `aparelhos`, `ordens`, `parts` ou `users`. As telas internas exigem autenticação. Estas são as rotas do Flutter; consulte os endpoints na [documentação da API](docs/API.md).
 
-## Flutter setup
+## Instruções para rodar
+
+### Pré-requisitos
+
+- Flutter instalado, com Dart compatível com `^3.9.0`.
+- Chrome ou Android SDK com emulador/dispositivo.
+- API TechFix em execução, com banco configurado e migrations aplicadas no projeto separado da API.
+
+### Iniciar a API
+
+Siga o README do projeto separado da API Laravel para iniciar os serviços. Os comandos abaixo utilizam a API em `http://localhost:8000/api`. Para o navegador, a API deve permitir a origem `http://localhost:8080` no CORS.
+
+### Instalar dependências
+
+Na pasta deste projeto:
 
 ```powershell
 flutter pub get
-flutter create --platforms=android --project-name techfix --org com.techfix .
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
 ```
 
-`10.0.2.2` reaches the host computer from the Android emulator. For a physical phone use the computer's LAN IP and allow port 8000 through the local firewall. For a deployed API use its HTTPS URL. Platform generation was not authorized during this session, so the Android folder must first be generated with the command above. For local HTTP development add `android:usesCleartextTraffic="true"` to the application element in `android/app/src/debug/AndroidManifest.xml`; use HTTPS in release builds. Add the `android.permission.INTERNET` permission in the main manifest for release networking.
-
-## Features
-
-- Registration, login, secure token storage, session restoration, logout and protected named routes.
-- Dashboard counts and shortcuts; customer/device/order CRUD with search, validation, loading, retry and empty states.
-- Device/customer selectors (a device's customer is optional), responsible employee selector, seven repair statuses and status filtering. Device forms do not request an IMEI.
-- Unique repair numbers, status history, price, diagnosis and notes.
-- Profile editing, staff management for administrators and spare parts inventory CRUD.
-- Foreign keys prevent deleting customers with devices or devices with orders. Delete dependents first; the API returns a readable conflict response.
-- Employees manage shop customers, devices, repair orders and parts. Only administrators manage staff. This is a single-shop system: records are shared across staff, not isolated by account.
-
-Inventory quantities are maintained manually; automatic part consumption and billing are outside this implementation. Repair history records creation and status changes. Public registration suits the requested classroom workflow; disable or restrict it before opening a private business deployment.
-
-## Architecture
-
-`lib/core/` holds theme, field definitions, constants, route names and validators without importing services/screens. `lib/models/` contains pure Dart JSON records. `lib/services/` owns HTTP, authentication and resource access; screens never call HTTP directly. App routing is composed in `lib/app_router.dart` to keep core independent. Shared CRUD screens use resource field metadata; repair details, authentication, dashboard and profile have dedicated screens.
-
-## Checks and demonstration
+### Executar no Chrome
 
 ```powershell
-dart format lib test
-dart analyze lib test
-flutter analyze
-flutter test
-cd backend
-php artisan test
+flutter run -d chrome --web-port=8080 --dart-define=API_BASE_URL=http://localhost:8000/api
 ```
 
-On the installed Windows SDK, `flutter analyze` may crash in the LSP handshake when the workspace path contains accented characters. `dart analyze lib test` runs the analyzer successfully in that case. On XAMPP where SQLite is installed but disabled, run `php -d extension=pdo_sqlite vendor/phpunit/phpunit/phpunit` from `backend/`. Backend tests use an isolated in-memory SQLite database and never reset your MySQL database.
+### Executar no Android
 
-Import [the Postman collection](docs/TechFix.postman_collection.json), set `base_url` and your credentials, then run requests in order. The collection saves authentication tokens and generated record IDs. See [API documentation](docs/API.md) and [demonstration steps](docs/DEMO.md).
+Caso a pasta `android/` ainda não exista, gere a plataforma:
 
-Generated screenshots are placed in `docs/screenshots/` by the screenshot widget test. These render the real widgets using deterministic test data; use the demo steps to verify a live MySQL/Android installation.
+```powershell
+flutter create --platforms=android --project-name techfix --org com.techfix .
+```
+
+Para desenvolvimento com HTTP, adicione `android:usesCleartextTraffic="true"` ao elemento `application` em `android/app/src/debug/AndroidManifest.xml`. Garanta a permissão `android.permission.INTERNET` no manifesto principal. Use HTTPS em produção.
+
+Inicie o emulador e execute:
+
+```powershell
+flutter devices
+flutter run -d <ID_DO_EMULADOR> --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
+```
+
+Substitua `<ID_DO_EMULADOR>` pelo identificador listado em `flutter devices`. O endereço `10.0.2.2` permite acessar o computador pelo emulador Android. Em um celular físico, use o IP do computador na rede local e permita a porta 8000 no firewall.
+
+### Entrar no aplicativo
+
+Cadastre uma conta ou entre com uma conta existente. Para gerenciar funcionários, utilize uma conta de administrador configurada no projeto da API.
+
+## Prints das telas
+
+As capturas existentes mostram os widgets reais do aplicativo com dados simulados por testes, sem conexão com um banco real durante a captura.
+
+### Login
+
+![Tela de login](docs/screenshots/login.png)
+
+### Painel inicial
+
+![Painel com indicadores da oficina](docs/screenshots/dashboard.png)
+
+### Clientes — lista vazia
+
+![Lista de clientes sem registros](docs/screenshots/customers_empty.png)
+
+### Falha de conexão
+
+![Erro de conexão com opção de tentar novamente](docs/screenshots/connection_error.png)
+
+## Verificação e documentação
+
+```powershell
+dart analyze lib test
+flutter test
+```
+
+Para gerar novamente os prints existentes:
+
+```powershell
+flutter test test/screenshots_test.dart
+```
+
+- [Contrato da API](docs/API.md)
+- [Coleção Postman](docs/TechFix.postman_collection.json)
+- [Roteiro de demonstração](docs/DEMO.md)
+- [Histórico de validação](docs/VALIDATION.md)
+
+O código está em `lib/`, os testes em `test/` e os prints em `docs/screenshots/`. Os exemplos históricos em `docs/original-scaffold/` não fazem parte do aplicativo TechFix.
